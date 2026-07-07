@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+bot_err.log
+bot_out.log
+data/*.json
+data/*.xlsx
