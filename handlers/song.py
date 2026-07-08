@@ -8,6 +8,7 @@ from services.claude_service import generate_lyrics, get_suno_style, improve_lyr
 from services.suno_service import generate_song
 from services.user_service import consume_generation
 from services.log_service import log_song
+from handlers.start import send_start_menu
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -194,7 +195,7 @@ async def got_style(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == "start_music")
-async def start_music(callback: CallbackQuery):
+async def start_music(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     data = _pending.get(user_id)
     if not data:
@@ -242,6 +243,7 @@ async def start_music(callback: CallbackQuery):
         callback.message, audio_url, data["title"],
         data["name"], data.get("occasion", ""), data["style"]
     )
+    await send_start_menu(callback.message, state)
 
 
 @router.callback_query(F.data == "edit_lyrics")

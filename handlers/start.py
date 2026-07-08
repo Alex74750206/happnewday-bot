@@ -28,8 +28,9 @@ LANGUAGE_KEYBOARD = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 
-@router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext):
+async def send_start_menu(message: Message, state: FSMContext):
+    """Показывает стартовое меню: язык для новой песни, либо меню оплаты если генераций не осталось.
+    Переиспользуется и в /start, и сразу после доставки готовой песни."""
     user_id = message.from_user.id
 
     if not has_generation_available(user_id):
@@ -55,3 +56,8 @@ async def cmd_start(message: Message, state: FSMContext):
         "Выбери язык песни:",
         reply_markup=LANGUAGE_KEYBOARD,
     )
+
+
+@router.message(CommandStart())
+async def cmd_start(message: Message, state: FSMContext):
+    await send_start_menu(message, state)
