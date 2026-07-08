@@ -5,6 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import TELEGRAM_BOT_TOKEN
 from handlers import song as song_handler
+from handlers import payment as payment_handler
 from handlers.start import router as start_router
 
 
@@ -19,6 +20,7 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
 
     dp.include_router(start_router)
+    dp.include_router(payment_handler.router)
     dp.include_router(song_handler.router)
 
     logging.info("Бот запущен. Ожидаю сообщения...")

@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from states import SongStates
 from services.claude_service import generate_lyrics, get_suno_style, improve_lyrics
 from services.suno_service import generate_song
-from services.user_service import mark_trial_used
+from services.user_service import consume_generation
 from services.log_service import log_song
 
 router = Router()
@@ -222,7 +222,7 @@ async def start_music(callback: CallbackQuery):
         await status_msg.edit_text(f"❌ Не удалось создать музыку.\n{hint}", reply_markup=RETRY_KEYBOARD)
         return
 
-    mark_trial_used(user_id)
+    consume_generation(user_id)
     try:
         log_song(
             user_id=user_id,

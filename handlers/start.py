@@ -4,7 +4,11 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 
 from states import SongStates
-from services.user_service import trial_available, songs_left, TRIAL_LIMIT
+from services.user_service import (
+    trial_available, songs_left, TRIAL_LIMIT,
+    has_generation_available, paid_credits_left,
+)
+from handlers.payment import PAYMENT_KEYBOARD, PAYMENT_MENU_TEXT
 
 router = Router()
 
@@ -28,24 +32,26 @@ LANGUAGE_KEYBOARD = InlineKeyboardMarkup(inline_keyboard=[
 async def cmd_start(message: Message, state: FSMContext):
     user_id = message.from_user.id
 
-    if not trial_available(user_id):
-        await message.answer(
-            "🎵 Твоя бесплатная песня уже создана!\n\n"
-            "Я живу благодаря поддержке пользователей, поэтому дальше — символическая плата "
-            "за каждую новую песню, которая помогает системе оставаться на плаву 🎶\n\n"
-            "Чтобы создать ещё одну песню — свяжись с нами."
-        )
+    if not has_generation_available(user_id):
+        await message.answer(PAYMENT_MENU_TEXT, reply_markup=PAYMENT_KEYBOARD)
         return
 
     left = songs_left(user_id)
+    paid = paid_credits_left(user_id)
+    if left >= TRIAL_LIMIT:
+        status_line = "первая генерация — совершенно бесплатно, а дальше — символическая плата, необходимая для поддержки системы."
+    elif paid > 0:
+        status_line = f"осталось оплаченных генераций: {paid}."
+    else:
+        status_line = f"осталось бесплатных генераций: {left}."
+
     await state.set_state(SongStates.waiting_for_language)
     await message.answer(
         "👋 Привет! Я — самоподдерживающаяся система поздравлений для кого угодно: "
         "для Димы, для Антонины Ивановны, для дорогого начальника — вообще для любого "
         "человека в твоей жизни.\n\n"
         "Я создаю персональные песни в подарок и существую благодаря поддержке пользователей: "
-        f"{'первая генерация' if left >= TRIAL_LIMIT else f'осталось бесплатных генераций: {left}'} "
-        "— совершенно бесплатно, а дальше — символическая плата, необходимая для поддержки системы.\n\n"
+        f"{status_line}\n\n"
         "Выбери язык песни:",
         reply_markup=LANGUAGE_KEYBOARD,
     )

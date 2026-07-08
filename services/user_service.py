@@ -58,3 +58,45 @@ def mark_trial_used(user_id: int) -> None:
     record["songs_used"] = _songs_used(record) + 1
     record.pop("trial_used", None)  # чистим старый формат
     _save(data)
+
+
+# Пакеты платных генераций за Telegram Stars: callback_data -> (кол-во песен, цена в звёздах)
+STAR_PACKAGES = {
+    "buy_1":  (1, 85),
+    "buy_5":  (5, 365),
+    "buy_10": (10, 560),
+}
+
+
+def paid_credits_left(user_id: int) -> int:
+    """Сколько оплаченных (не бесплатных) генераций осталось у пользователя."""
+    if is_admin(user_id):
+        return 10 ** 9
+    data = _load()
+    return data.get(str(user_id), {}).get("paid_credits", 0)
+
+
+def add_paid_credits(user_id: int, count: int) -> None:
+    """Начисляет оплаченные генерации после успешной оплаты звёздами."""
+    data = _load()
+    record = data.setdefault(str(user_id), {})
+    record["paid_credits"] = record.get("paid_credits", 0) + count
+    _save(data)
+
+
+def has_generation_available(user_id: int) -> bool:
+    """True если у пользователя есть хотя бы одна генерация — бесплатная или оплаченная."""
+    return trial_available(user_id) or paid_credits_left(user_id) > 0
+
+
+def consume_generation(user_id: int) -> None:
+    """Списывает одну генерацию: сначала бесплатный триал, затем оплаченные звёздами."""
+    if is_admin(user_id):
+        return
+    if trial_available(user_id):
+        mark_trial_used(user_id)
+        return
+    data = _load()
+    record = data.setdefault(str(user_id), {})
+    record["paid_credits"] = max(0, record.get("paid_credits", 0) - 1)
+    _save(data)
