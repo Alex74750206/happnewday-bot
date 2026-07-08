@@ -4,7 +4,7 @@ from config import ADMIN_ID
 
 _DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "users.json")
 
-TRIAL_LIMIT = 3  # бесплатных песен на пользователя
+TRIAL_LIMIT = 1  # бесплатных песен на пользователя
 
 
 def _load() -> dict:
