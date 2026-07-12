@@ -7,9 +7,10 @@ from config import ADMIN_ID
 from states import SongStates
 from services.claude_service import generate_lyrics, get_suno_style, improve_lyrics
 from services.suno_service import generate_song
-from services.user_service import consume_generation
+from services.user_service import consume_generation, has_generation_available
 from services.log_service import log_song, get_log_file_path
 from handlers.start import send_start_menu
+from handlers.payment import PAYMENT_KEYBOARD, PAYMENT_MENU_TEXT
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -201,6 +202,14 @@ async def start_music(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = _pending.get(user_id)
     if not data:
         await callback.answer("Данные устарели, начни заново — /start", show_alert=True)
+        return
+
+    # Критическая проверка: без неё пользователь мог сгенерировать песню повторным нажатием
+    # этой же кнопки, даже если бесплатная генерация уже использована и оплата не прошла.
+    if not has_generation_available(user_id):
+        await callback.answer()
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer(PAYMENT_MENU_TEXT, reply_markup=PAYMENT_KEYBOARD)
         return
 
     await callback.answer()
