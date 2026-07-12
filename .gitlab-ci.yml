@@ -26,7 +26,7 @@ bot_job:
     - git config user.email "ci@gitlab.com"
     - git config user.name "GitLab CI"
     - git add -A
-    - git diff --staged --quiet || git commit -m "auto: data $(date -u +%Y-%m-%dT%H:%M)"
+    - 'git diff --staged --quiet || git commit -m "auto data $(date -u +%Y-%m-%dT%H:%M)"'
     - git push "https://oauth2:${DATA_REPO_TOKEN}@${DATA_REPO_URL#https://}" HEAD:main || true
   only:
     - schedules
