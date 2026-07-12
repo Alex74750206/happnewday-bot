@@ -270,7 +270,7 @@ async def start_music(callback: CallbackQuery, state: FSMContext, bot: Bot):
         callback.message, audio_url, data["title"],
         data["name"], data.get("occasion", ""), data["style"]
     )
-    await send_start_menu(callback.message, state, show_greeting=False)
+    await send_start_menu(callback.message, state, show_greeting=False, user_id=user_id)
 
 
 @router.callback_query(F.data == "edit_lyrics")

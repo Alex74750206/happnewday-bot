@@ -28,11 +28,15 @@ LANGUAGE_KEYBOARD = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 
-async def send_start_menu(message: Message, state: FSMContext, show_greeting: bool = True):
+async def send_start_menu(message: Message, state: FSMContext, show_greeting: bool = True, user_id: int | None = None):
     """Показывает стартовое меню: язык для новой песни, либо меню оплаты если генераций не осталось.
     Переиспользуется и в /start (show_greeting=True — полное приветствие), и сразу после доставки
-    готовой песни (show_greeting=False — короткое приглашение без повторного приветствия)."""
-    user_id = message.from_user.id
+    готовой песни (show_greeting=False — короткое приглашение без повторного приветствия).
+    user_id передавать ЯВНО, когда message — это сообщение БОТА (например callback.message в
+    song.py) — иначе message.from_user.id резолвится в ID бота, а не реального клиента, и проверка
+    баланса всегда проходит как "доступно" (баг, найденный 12.07.2026)."""
+    if user_id is None:
+        user_id = message.from_user.id
 
     if not has_generation_available(user_id):
         await message.answer(PAYMENT_MENU_TEXT, reply_markup=PAYMENT_KEYBOARD)
