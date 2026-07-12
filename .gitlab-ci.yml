@@ -1,0 +1,33 @@
+stages:
+  - run
+
+variables:
+  PYTHONUNBUFFERED: "1"
+  GIT_DEPTH: "1"
+  DATA_REPO_URL: "https://gitlab.com/pepomarv/happnewday-bot-data.git"
+
+bot_job:
+  stage: run
+  image: python:3.12-slim
+  timeout: 5h 45m
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git > /dev/null
+    - pip install -r requirements.txt -q
+    - git clone --depth 1 "https://oauth2:${DATA_REPO_TOKEN}@${DATA_REPO_URL#https://}" /tmp/data_repo || mkdir -p /tmp/data_repo
+    - mkdir -p data
+    - cp /tmp/data_repo/users.json data/users.json 2>/dev/null || echo '{}' > data/users.json
+    - cp /tmp/data_repo/songs_log.xlsx data/songs_log.xlsx 2>/dev/null || true
+  script:
+    - timeout 20700 python main.py || true
+  after_script:
+    - cp data/users.json /tmp/data_repo/users.json 2>/dev/null || true
+    - cp data/songs_log.xlsx /tmp/data_repo/songs_log.xlsx 2>/dev/null || true
+    - cd /tmp/data_repo
+    - git config user.email "ci@gitlab.com"
+    - git config user.name "GitLab CI"
+    - git add -A
+    - git diff --staged --quiet || git commit -m "auto: data $(date -u +%Y-%m-%dT%H:%M)"
+    - git push "https://oauth2:${DATA_REPO_TOKEN}@${DATA_REPO_URL#https://}" HEAD:main || true
+  only:
+    - schedules
+    - web

@@ -28,9 +28,10 @@ LANGUAGE_KEYBOARD = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 
-async def send_start_menu(message: Message, state: FSMContext):
+async def send_start_menu(message: Message, state: FSMContext, show_greeting: bool = True):
     """Показывает стартовое меню: язык для новой песни, либо меню оплаты если генераций не осталось.
-    Переиспользуется и в /start, и сразу после доставки готовой песни."""
+    Переиспользуется и в /start (show_greeting=True — полное приветствие), и сразу после доставки
+    готовой песни (show_greeting=False — короткое приглашение без повторного приветствия)."""
     user_id = message.from_user.id
 
     if not has_generation_available(user_id):
@@ -47,17 +48,22 @@ async def send_start_menu(message: Message, state: FSMContext):
         status_line = f"осталось бесплатных генераций: {left}."
 
     await state.set_state(SongStates.waiting_for_language)
-    await message.answer(
-        "👋 Привет! Я — самоподдерживающаяся система поздравлений для кого угодно: "
-        "для Димы, для Антонины Ивановны, для дорогого начальника — вообще для любого "
-        "человека в твоей жизни.\n\n"
-        "Я создаю персональные песни в подарок и существую благодаря поддержке пользователей: "
-        f"{status_line}\n\n"
-        "Выбери язык песни:",
-        reply_markup=LANGUAGE_KEYBOARD,
-    )
+
+    if show_greeting:
+        text = (
+            "👋 Привет! Я — самоподдерживающаяся система поздравлений для кого угодно: "
+            "для Димы, для Антонины Ивановны, для дорогого начальника — вообще для любого "
+            "человека в твоей жизни.\n\n"
+            "Я создаю персональные песни в подарок и существую благодаря поддержке пользователей: "
+            f"{status_line}\n\n"
+            "Выбери язык песни:"
+        )
+    else:
+        text = f"🎵 Готов сделать ещё одну песню! {status_line}\n\nВыбери язык песни:"
+
+    await message.answer(text, reply_markup=LANGUAGE_KEYBOARD)
 
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
-    await send_start_menu(message, state)
+    await send_start_menu(message, state, show_greeting=True)

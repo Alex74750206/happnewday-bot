@@ -243,7 +243,7 @@ async def start_music(callback: CallbackQuery, state: FSMContext):
         callback.message, audio_url, data["title"],
         data["name"], data.get("occasion", ""), data["style"]
     )
-    await send_start_menu(callback.message, state)
+    await send_start_menu(callback.message, state, show_greeting=False)
 
 
 @router.callback_query(F.data == "edit_lyrics")
