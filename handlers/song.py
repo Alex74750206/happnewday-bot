@@ -7,7 +7,7 @@ from config import ADMIN_ID
 from states import SongStates
 from services.claude_service import generate_lyrics, get_suno_style, improve_lyrics
 from services.suno_service import generate_song
-from services.user_service import consume_generation, has_generation_available
+from services.user_service import consume_generation, has_generation_available, refund_generation
 from services.log_service import log_song, get_log_file_path
 from handlers.start import send_start_menu
 from handlers.payment import PAYMENT_KEYBOARD, PAYMENT_MENU_TEXT
@@ -212,6 +212,11 @@ async def start_music(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.message.answer(PAYMENT_MENU_TEXT, reply_markup=PAYMENT_KEYBOARD)
         return
 
+    # Списываем генерацию СРАЗУ, до начала запроса в Suno (который идёт 1-3 минуты) — иначе
+    # пользователь успевает пройти диалог второй раз и получить вторую песню бесплатно, пока
+    # первая ещё не готова и баланс формально ещё не тронут. Если генерация упадёт — вернём.
+    consumed_kind = consume_generation(user_id)
+
     await callback.answer()
     await callback.message.edit_reply_markup(reply_markup=None)
     status_msg = await callback.message.answer("🎵 Создаю музыку... (1-3 мин)")
@@ -225,6 +230,7 @@ async def start_music(callback: CallbackQuery, state: FSMContext, bot: Bot):
         audio_url = await generate_song(data["lyrics"], data["suno_style"], data["title"])
     except Exception as e:
         logger.error("Ошибка генерации музыки: %s", e)
+        refund_generation(user_id, consumed_kind)
         err_str = str(e)
         if "SENSITIVE_WORD_ERROR" in err_str:
             hint = "Suno заблокировал текст по фильтру. Попробуй отредактировать текст или повторить."
@@ -233,7 +239,6 @@ async def start_music(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await status_msg.edit_text(f"❌ Не удалось создать музыку.\n{hint}", reply_markup=RETRY_KEYBOARD)
         return
 
-    consume_generation(user_id)
     try:
         log_song(
             user_id=user_id,

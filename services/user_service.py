@@ -89,14 +89,30 @@ def has_generation_available(user_id: int) -> bool:
     return trial_available(user_id) or paid_credits_left(user_id) > 0
 
 
-def consume_generation(user_id: int) -> None:
-    """Списывает одну генерацию: сначала бесплатный триал, затем оплаченные звёздами."""
+def consume_generation(user_id: int) -> str:
+    """Списывает одну генерацию: сначала бесплатный триал, затем оплаченные звёздами.
+    Возвращает 'admin'/'trial'/'paid' — что именно списалось (нужно для refund_generation,
+    если сама генерация музыки потом не удастся)."""
     if is_admin(user_id):
-        return
+        return "admin"
     if trial_available(user_id):
         mark_trial_used(user_id)
-        return
+        return "trial"
     data = _load()
     record = data.setdefault(str(user_id), {})
     record["paid_credits"] = max(0, record.get("paid_credits", 0) - 1)
+    _save(data)
+    return "paid"
+
+
+def refund_generation(user_id: int, kind: str) -> None:
+    """Возвращает списанную generation обратно — если генерация музыки не удалась после списания."""
+    if kind == "admin":
+        return
+    data = _load()
+    record = data.setdefault(str(user_id), {})
+    if kind == "trial":
+        record["songs_used"] = max(0, _songs_used(record) - 1)
+    elif kind == "paid":
+        record["paid_credits"] = record.get("paid_credits", 0) + 1
     _save(data)
