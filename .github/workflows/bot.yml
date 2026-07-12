@@ -1,0 +1,51 @@
+name: Run Telegram Bot
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore data from private repo
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: |
+          git clone --depth 1 "https://oauth2:${DATA_REPO_TOKEN}@gitlab.com/pepomarv/happnewday-bot-data.git" /tmp/data_repo || mkdir -p /tmp/data_repo
+          mkdir -p data
+          cp /tmp/data_repo/users.json data/users.json 2>/dev/null || echo '{}' > data/users.json
+          cp /tmp/data_repo/songs_log.xlsx data/songs_log.xlsx 2>/dev/null || true
+
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          KIE_API_KEY: ${{ secrets.KIE_API_KEY }}
+          ADMIN_ID: ${{ secrets.ADMIN_ID }}
+        run: timeout 20400 python main.py || true
+
+      - name: Backup data to private repo
+        if: always()
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: |
+          cp data/users.json /tmp/data_repo/users.json 2>/dev/null || true
+          cp data/songs_log.xlsx /tmp/data_repo/songs_log.xlsx 2>/dev/null || true
+          cd /tmp/data_repo
+          git config user.email "ci@github.com"
+          git config user.name "GitHub Actions"
+          git add -A
+          git diff --staged --quiet || git commit -m "auto data backup"
+          git push "https://oauth2:${DATA_REPO_TOKEN}@gitlab.com/pepomarv/happnewday-bot-data.git" HEAD:main || true
