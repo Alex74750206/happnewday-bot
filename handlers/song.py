@@ -1,13 +1,14 @@
 import logging
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram import Router, F, Bot
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from aiogram.fsm.context import FSMContext
 
+from config import ADMIN_ID
 from states import SongStates
 from services.claude_service import generate_lyrics, get_suno_style, improve_lyrics
 from services.suno_service import generate_song
 from services.user_service import consume_generation
-from services.log_service import log_song
+from services.log_service import log_song, get_log_file_path
 from handlers.start import send_start_menu
 
 router = Router()
@@ -195,7 +196,7 @@ async def got_style(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == "start_music")
-async def start_music(callback: CallbackQuery, state: FSMContext):
+async def start_music(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_id = callback.from_user.id
     data = _pending.get(user_id)
     if not data:
@@ -237,6 +238,18 @@ async def start_music(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
         # Песня уже оплачена и сгенерирована — сбой записи в лог не должен блокировать доставку
         logger.error("Ошибка записи в лог заказов: %s", e)
+
+    # Бот работает в облаке — файл лога нигде на сервере не хранится постоянно,
+    # поэтому актуальный excel сразу уходит приватным сообщением только админу.
+    try:
+        await bot.send_document(
+            chat_id=ADMIN_ID,
+            document=FSInputFile(get_log_file_path()),
+            caption=f"📊 Новый заказ: {data['name']} ({data.get('occasion', '')})",
+        )
+    except Exception as e:
+        logger.error("Ошибка отправки лога админу: %s", e)
+
     _pending.pop(user_id, None)
     await status_msg.delete()
     await _send_audio(

@@ -8,6 +8,11 @@ from openpyxl.utils import get_column_letter
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 _LOG_FILE = os.path.join(_DATA_DIR, "songs_log.xlsx")
 
+
+def get_log_file_path() -> str:
+    """Путь к файлу лога заказов — используется чтобы отправить его админу в Telegram."""
+    return _LOG_FILE
+
 _HEADERS = ["Дата", "Время", "ID пользователя", "Имя в Telegram",
             "Имя получателя", "Повод", "Стиль", "Ссылка на песню", "Текст песни"]
 
