@@ -5,3 +5,4 @@ bot_err.log
 bot_out.log
 data/*.json
 data/*.xlsx
+.claude/scheduled_tasks.lock
