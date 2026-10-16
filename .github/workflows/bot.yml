@@ -5,12 +5,19 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   bot:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
+
+      # GitHub отключает cron через 60 дней без коммитов — продлеваем автоматически
+      - uses: gautamkrishnar/keepalive-workflow@v2
 
       - uses: actions/setup-python@v5
         with:
