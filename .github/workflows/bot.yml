@@ -16,8 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GitHub отключает cron через 60 дней без коммитов — продлеваем автоматически
-      - uses: gautamkrishnar/keepalive-workflow@v2
+      # GitHub отключает cron через 60 дней без коммитов — продлеваем через API
+      # (сторонний gautamkrishnar/keepalive-workflow заблокирован GitHub'ом — не использовать)
+      - name: Keepalive schedule
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/bot.yml/enable" || true
 
       - uses: actions/setup-python@v5
         with:
